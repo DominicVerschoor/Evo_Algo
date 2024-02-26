@@ -20,7 +20,6 @@ def generate_population(item_list, weight_limit, pop_size):
     return pops
 
 def ranking_population(population):
-
     sorted_pop = sorted(population, key=lambda d: sum(d.keys()), reverse=True)
     scores_list = []
     for group in sorted_pop:
@@ -36,6 +35,15 @@ def tournament_selection(population, k=5):
 
     return mating_pool
 
+def crossover(parent1, parent2, prob=0.8):
+    child1 = parent1.copy()
+    child2 = parent2.copy()
+    if (random.random() < prob):
+        cross_pt = random.randint(0, min(len(parent1), len(parent2))-2)
+        child1 = parent1[:cross_pt] + parent2[cross_pt:]
+        child2 = parent2[:cross_pt] + parent1[cross_pt:]
+
+
 weight_limit = 10
 item_list = generate_item_list(weight_limit)
 
@@ -45,5 +53,7 @@ reordered_population = ranking_population(population)[0]
 
 pop_pool = tournament_selection(reordered_population)
 
-print(pop_pool)
+
+
+
 
