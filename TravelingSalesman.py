@@ -22,7 +22,7 @@ def ranking_population(population):
     for path in population:
         scores_list.append(get_fitness_score(path))
 
-    scores_list, sorted_pop = zip(*sorted(zip(scores_list, population), reverse=True))
+    scores_list, sorted_pop = zip(*sorted(zip(scores_list, population)))
     return sorted_pop, scores_list
 
 
@@ -41,7 +41,7 @@ def tournament_selection(population, scores, prob=0.8, k=5):
 
 
 def select_champion(group, group_score, prob):
-    sorted_score, sorted_group = zip(*sorted(zip(group_score, group), reverse=True))
+    sorted_score, sorted_group = zip(*sorted(zip(group_score, group)))
     # the champion is not always the highest scored, but sometimes second or third depending on the probability
     for i in range(len(sorted_group)):
         # decreasing probability of being chosen the lower ranked item
@@ -213,6 +213,7 @@ def genetic_algorithm(num_generations=100, cities_size=10, population_size=100, 
                                                                                              population_size))
     print("---------------------------------------------------------------------------\n")
     best_lists = [[] for _ in range(num_best_lists)]
+    best_paths = [[] for _ in range(num_best_lists)]
 
     # initialize all possible items and generate a population from them
     cities_list = generate_cities(cities_size)
@@ -223,7 +224,9 @@ def genetic_algorithm(num_generations=100, cities_size=10, population_size=100, 
 
     # append best score
     for i in range(num_best_lists):
-        best_lists[i].append(ranking_population(pop_pool)[1][0])
+        best_path, best_score = ranking_population(pop_pool)
+        best_lists[i].append(best_score[0])
+        best_paths[i].append(best_path[0])
 
     # generate N generations
     prev = pop_pool.copy()
@@ -231,7 +234,9 @@ def genetic_algorithm(num_generations=100, cities_size=10, population_size=100, 
         # generate different results for different parameters
         for j in range(num_best_lists):
             tmp = next_generation(prev, cross_version=cross_version[j])
-            best_lists[j].append(ranking_population(tmp)[1][0])
+            best_path, best_score = ranking_population(tmp)
+            best_lists[j].append(best_score[0])
+            best_paths[j].append(best_path[0])
             tmp_scores = get_population_fitness_scores(tmp)
 
             prev = tournament_selection(tmp, tmp_scores)
@@ -239,7 +244,8 @@ def genetic_algorithm(num_generations=100, cities_size=10, population_size=100, 
         print("Completed Generation", i)
 
     print("Algorithm Complete :)\n------------------------------------------------------------------\n")
-    return best_lists
+    print()
+    return best_lists, best_paths
 
 
 def plot(all_scores):
@@ -257,10 +263,12 @@ def plot(all_scores):
 
 if __name__ == '__main__':
     random.seed(100)
-    score_list = genetic_algorithm(num_generations=100,
-                                   cities_size=10,
+    score_list, path_list = genetic_algorithm(num_generations=1000,
+                                   cities_size=50,
                                    population_size=100,
                                    cross_version=['pmx', 'ox'],
                                    num_best_lists=2)
     plot(score_list)
+    print(path_list[0][-1:])
+
 
