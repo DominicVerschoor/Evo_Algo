@@ -80,17 +80,17 @@ def get_population_fitness_scores(population):
 
 def pmx_crossover(parent1, parent2, cross_prob):
     if random.random() <= cross_prob:
-        midpoint = random.randint(1, len(parent1) - 1)
+        midpoint = random.randint(1, len(parent1) - 2)
         cutoff_1 = random.randint(0, midpoint)
-        cutoff_2 = random.randint(midpoint, len(parent1))
+        cutoff_2 = random.randint(midpoint, len(parent1) - 1)
 
         offspring1 = [-1] * len(parent1)
         offspring2 = [-1] * len(parent2)
 
         offspring1[cutoff_1:cutoff_2] = parent2[cutoff_1:cutoff_2]
         offspring2[cutoff_1:cutoff_2] = parent1[cutoff_1:cutoff_2]
-        print(offspring1)
-        print(offspring2)
+        # print(offspring1)
+        # print(offspring2)
 
         for i, (o1, p1) in enumerate(zip(offspring1, parent1)):
             # print(i, o1, p1)
@@ -128,17 +128,17 @@ def pmx_crossover(parent1, parent2, cross_prob):
 
 def ox_crossover(parent1, parent2, cross_prob):
     if random.random() <= cross_prob:
-        midpoint = random.randint(1, len(parent1) - 1)
+        midpoint = random.randint(1, len(parent1) - 2)
         cutoff_1 = random.randint(0, midpoint)
-        cutoff_2 = random.randint(midpoint, len(parent1))
+        cutoff_2 = random.randint(midpoint, len(parent1) - 1)
 
         offspring1 = [-1] * len(parent1)
         offspring2 = [-1] * len(parent2)
 
         offspring1[cutoff_1:cutoff_2] = parent2[cutoff_1:cutoff_2]
         offspring2[cutoff_1:cutoff_2] = parent1[cutoff_1:cutoff_2]
-        print(offspring1)
-        print(offspring2)
+        # print(offspring1)
+        # print(offspring2)
 
         for i in range(cutoff_2, len(parent1) + cutoff_1):
             i = i % len(parent1)
@@ -216,9 +216,7 @@ def genetic_algorithm(num_generations=100, cities_size=10, population_size=100, 
 
     # initialize all possible items and generate a population from them
     cities_list = generate_cities(cities_size)
-    print(cities_list)
     population = generate_population(cities_list, population_size)
-    print(population[:3])
     population_scores = get_population_fitness_scores(population)
     # first iteration of selection
     pop_pool = tournament_selection(population, population_scores)
@@ -265,7 +263,4 @@ if __name__ == '__main__':
                                    cross_version=['pmx', 'ox'],
                                    num_best_lists=2)
     plot(score_list)
-    # c_l = generate_cities(10)
-    # kk = c_l.copy()
-    # random.shuffle(kk)
-    # print(kk)
+
