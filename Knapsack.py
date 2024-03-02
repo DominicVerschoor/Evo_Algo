@@ -24,52 +24,61 @@ def generate_population(item_list, weight_limit, pop_size):
         pops.append(group)
     return pops
 
-
-def ranking_population(population):
+def ranking_population(population, weight_limit, fitness="cutoff"):
     # reorders population from best-->worst item
     # also returns score of each item
     scores_list = []
-    sorted_pop = sorted(population, key=lambda d: sum(d.keys()), reverse=True)
-    for group in sorted_pop:
-        scores_list.append(sum(group.keys()))
-    return sorted_pop, scores_list
+    for child in population:
+        if (fitness.lower() == 'cutoff'):
+            if not (sum(child.values()) > weight_limit):
+                scores_list.append(sum(child.keys()))
+        elif (fitness.lower() == 'adjusted'):
+            scores_list.append(adjust_score(child, weight_limit))
 
+    return max(scores_list), scores_list
 
-def tournament_selection(population, prob=0.8, k=5):
-    # Use tournament selection to get the fittest individuals of the population
-    mating_pool = []
-    while len(mating_pool) != len(population):
-        group = random.sample(population, k)
-        # selects champion from each pool
-        champion = select_champion(group, prob)
-        mating_pool.append(champion)
-
-    return mating_pool
-
-def select_champion(group, prob):
-    sorted_group = sorted(group, key=lambda d: sum(d.keys()), reverse=True)
-    # the champion is not always the highest scored, but sometimes second or third depending on the probability
-    for i in range(len(sorted_group)):
-        # decreasing probability of being chosen the lower ranked item
-        prob = prob * ((1 - prob) ** i)
-        if random.random() < prob:
-            return sorted_group[i]
-
-    return sorted_group[0]
-
-def adjust_weight(child, weight_limit):
+def adjust_score(child, weight_limit):
     # adjust the weights of the child if it is over the threshold
     total_weight = sum(child.values())
     if total_weight > weight_limit:
         # Calculate the negative difference
         diff = total_weight - weight_limit
-        for key in child:
-            child[key] -= min(child[key], diff)
-        return child
+        return (sum(child.keys()) - diff)
     else:
-        return child
+        return sum(child.keys())
 
-def single_point_crossover(parent1, parent2, weight_limit, prob=0.8, fitness="cutoff"):
+def tournament_selection(population, weight_limit, fitness='cutoff', prob=0.8, k=5):
+    # Use tournament selection to get the fittest individuals of the population
+    mating_pool = []
+    while len(mating_pool) != len(population):
+        group = random.sample(population, k)
+        # selects champion from each pool
+        champion = select_champion(group, prob, weight_limit, fitness)
+        mating_pool.append(champion)
+
+    return mating_pool
+
+def select_champion(group, prob, weight_limit, fitness='cutoff'):
+    def fitness_score(child):
+        if fitness.lower() == 'cutoff':
+            return sum(child.keys())
+        elif fitness.lower() == 'adjusted':
+            weight_difference = sum(child.values()) - weight_limit
+            return sum(child.keys()) - weight_difference if weight_difference > 0 else sum(child.keys())
+
+    if fitness.lower() == 'cutoff':
+        group = [child for child in group if sum(child.values()) <= weight_limit]
+
+    sorted_group = sorted(group, key=fitness_score, reverse=True)
+
+    for i, child in enumerate(sorted_group):
+        prob = prob * ((1 - prob) ** i)
+        if random.random() < prob:
+            return child
+
+    return sorted_group[0]
+
+def single_point_crossover(parent1, parent2, prob=0.8):
     child1, child2 = parent1.copy(), parent2.copy()
 
     if random.random() < prob:
@@ -84,22 +93,10 @@ def single_point_crossover(parent1, parent2, weight_limit, prob=0.8, fitness="cu
         child1 = dict(child1_list)
         child2 = dict(child2_list)
 
-        # Check if child values exceed the weight limit
-        if sum(child1.values()) > weight_limit or sum(child2.values()) > weight_limit:
-            if (fitness.lower() == 'cutoff'):
-                # If cutoff, copy parents
-                child1, child2 = parent1.copy(), parent2.copy()
-            elif (fitness.lower() == 'adjusted'):
-                # if adjusted, assign negative weight
-                child1 = adjust_weight(child1, weight_limit)
-                child2 = adjust_weight(child2, weight_limit)
-            else:
-                print("Please enter a valid form of crossover: 'cutoff', 'adjusted'")
-
     return child1, child2
 
 
-def double_point_crossover(parent1, parent2, weight_limit, prob=0.8, fitness="cutoff"):
+def double_point_crossover(parent1, parent2, prob=0.8):
     child1, child2 = parent1.copy(), parent2.copy()
 
     if random.random() < prob:
@@ -116,18 +113,6 @@ def double_point_crossover(parent1, parent2, weight_limit, prob=0.8, fitness="cu
 
             child1 = dict(child1_list)
             child2 = dict(child2_list)
-
-            # Check if child values exceed the weight limit
-            if (sum(child1.values()) > weight_limit or sum(child2.values()) > weight_limit):
-                if (fitness.lower() == 'cutoff'):
-                    # If cutoff, copy parents
-                    child1, child2 = parent1.copy(), parent2.copy()
-                elif (fitness.lower() == 'adjusted'):
-                    # if adjusted, assign negative weight
-                    child1 = adjust_weight(child1, weight_limit)
-                    child2 = adjust_weight(child2, weight_limit)
-                else:
-                    print("Please enter a valid form of crossover: 'cutoff', 'adjusted'")
         else:
             # Handle the case when the input dictionaries are too small
             child1, child2 = parent1.copy(), parent2.copy()
@@ -150,7 +135,7 @@ def mutation(child, weight_limit):
     return child
 
 
-def next_generation(population, weight_limit, cross_version="single", cross_prob=0.8, mutate_prob=0.2, fitness="cutoff"):
+def next_generation(population, weight_limit, cross_version="single", cross_prob=0.8, mutate_prob=0.2):
     # generates the next generation
     pop = population.copy()
     next_gen = []
@@ -161,9 +146,9 @@ def next_generation(population, weight_limit, cross_version="single", cross_prob
 
         # crossover the parents
         if cross_version.lower() == "single":
-            child1, child2 = single_point_crossover(parents[0], parents[1], weight_limit=weight_limit ,prob=cross_prob, fitness=fitness)
+            child1, child2 = single_point_crossover(parents[0], parents[1],prob=cross_prob)
         elif cross_version.lower() == "double":
-            child1, child2 = double_point_crossover(parents[0], parents[1], weight_limit=weight_limit, prob=cross_prob, fitness=fitness)
+            child1, child2 = double_point_crossover(parents[0], parents[1], prob=cross_prob)
         else:
             print("Please enter a valid form of crossover: 'single', 'double'")
             break
@@ -196,21 +181,20 @@ def genetic_algorithm(num_generations=100, weight_limit=10, population_size=100,
     item_list = generate_item_list(weight_limit)
     population = generate_population(item_list, weight_limit, population_size)
 
-    # first iteration of selection
-    pop_pool = tournament_selection(population)
-
+    pop_pool = []
     # append best score
     for i in range(num_best_lists):
-        best_lists[i].append(ranking_population(pop_pool)[1][0])
+        pop_pool.append(tournament_selection(population, weight_limit, fitness=fitness[i], prob=0.8, k=5))
+        best_lists[i].append(ranking_population(pop_pool[i], weight_limit=weight_limit, fitness=fitness[i]))
 
     # generate N generations
     prev = pop_pool.copy()
     for i in range(num_generations):
         # generate different results for different parameters
         for j in range(num_best_lists):
-            tmp = next_generation(prev, weight_limit, cross_version=cross_version[j], fitness=fitness[j])
-            best_lists[j].append(ranking_population(tmp)[1][0])
-            prev = tournament_selection(tmp)
+            tmp = next_generation(prev[j], weight_limit, cross_version=cross_version[j])
+            best_lists[j].append(ranking_population(tmp, weight_limit=weight_limit, fitness=fitness[j]))
+            prev[j] = tournament_selection(population, weight_limit, fitness='cutoff', prob=0.8, k=5)
 
         print("Completed Generation", i)
 
@@ -232,11 +216,15 @@ def plot(all_scores):
 
 
 random.seed(100)
-score_list = genetic_algorithm(num_generations=1000, 
-                               weight_limit=2000, 
-                               population_size=2000, 
-                               cross_version=["single", "single", 'double', 'double'], 
-                               fitness=['cutoff', 'adjusted', 'cutoff', 'adjusted'], 
-                               num_best_lists=4)
+# score_list = genetic_algorithm(num_generations=1000, 
+#                                weight_limit=2000, 
+#                                population_size=1000, 
+#                                cross_version=["single", "single", 'double', 'double'], 
+#                                fitness=['cutoff', 'adjusted', 'cutoff', 'adjusted'], 
+#                                num_best_lists=4)
 
-plot(score_list)
+# plot(score_list)
+
+test = [{0:10, 1:2}, {2:5, 3:6}, {4:20, 5:20}, {6:5, 7:1}, {8:4, 9:3}]
+print(ranking_population(test, weight_limit=15, fitness='adjusted')[1])
+
