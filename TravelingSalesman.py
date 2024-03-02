@@ -160,6 +160,21 @@ def ox_crossover(parent1, parent2, cross_prob):
     return offspring1, offspring2
 
 
+def sx_crossover(parent1, parent2, cross_prob):
+    if random.random() <= cross_prob:
+        cutoffs = random.sample(range(len(parent1)), 4)
+        cutoffs = sorted(cutoffs)
+        # print(cutoffs)
+        offspring1 = parent1[:cutoffs[0]] + parent1[cutoffs[2]:cutoffs[3]] + parent1[cutoffs[1]:cutoffs[2]] + parent1[cutoffs[0]:cutoffs[1]] + parent1[cutoffs[3]:]
+        offspring2 = parent2[:cutoffs[0]] + parent2[cutoffs[2]:cutoffs[3]] + parent2[cutoffs[1]:cutoffs[2]] + parent2[cutoffs[0]:cutoffs[1]] + parent2[cutoffs[3]:]
+
+    else:
+        offspring1 = parent1
+        offspring2 = parent2
+
+    return offspring1, offspring2
+
+
 def mutation(child):
     from_idx = random.randint(0, len(child)-1)
     to_idx = random.randint(0, len(child)-1)
@@ -184,9 +199,11 @@ def next_generation(population, cross_version="pmx", cross_prob=0.8, mutate_prob
         if cross_version.lower() == "pmx":
             child1, child2 = pmx_crossover(parents[0], parents[1], cross_prob)
         elif cross_version.lower() == "ox":
-            child1, child2 = pmx_crossover(parents[0], parents[1], cross_prob)
+            child1, child2 = ox_crossover(parents[0], parents[1], cross_prob)
+        elif cross_version.lower() == "sx":
+            child1, child2 = sx_crossover(parents[0], parents[1], cross_prob)
         else:
-            print("Please enter a valid form of crossover: 'pmx', 'ox'")
+            print("Please enter a valid form of crossover: 'pmx', 'ox', 'sx'")
             break
 
         # randomly mutate
@@ -207,8 +224,8 @@ def next_generation(population, cross_version="pmx", cross_prob=0.8, mutate_prob
     return next_gen
 
 
-def genetic_algorithm(num_generations=100, cities_size=10, population_size=100, cross_version=["ox", "pmx"],
-                      num_best_lists=2):
+def genetic_algorithm(num_generations=100, cities_size=10, population_size=100, cross_version=["ox", "pmx", "sx"],
+                      num_best_lists=3):
     print("Starting genetic Algorithm: Number of cities = {} Population size = {}...".format(cities_size,
                                                                                              population_size))
     print("---------------------------------------------------------------------------\n")
@@ -229,10 +246,9 @@ def genetic_algorithm(num_generations=100, cities_size=10, population_size=100, 
         best_paths[i].append(best_path[0])
 
     # generate N generations
-    prev = pop_pool.copy()
-    for i in range(num_generations):
-        # generate different results for different parameters
-        for j in range(num_best_lists):
+    for j in range(num_best_lists):
+        prev = pop_pool.copy()
+        for i in range(num_generations):
             tmp = next_generation(prev, cross_version=cross_version[j])
             best_path, best_score = ranking_population(tmp)
             best_lists[j].append(best_score[0])
@@ -241,23 +257,23 @@ def genetic_algorithm(num_generations=100, cities_size=10, population_size=100, 
 
             prev = tournament_selection(tmp, tmp_scores)
 
-        print("Completed Generation", i)
+        print("Completed Generation", j)
 
     print("Algorithm Complete :)\n------------------------------------------------------------------\n")
     print()
     return best_lists, best_paths
 
 
-def plot(all_scores):
+def plot(all_scores, labels):
     # Plot each list in the same plot
     for i, sublist in enumerate(all_scores):
-        plt.plot(sublist, label=f"Algorithm {i + 1}")
+        plt.plot(sublist, label=labels[i], lw=2)
 
     # Add legend and labels
     plt.legend()
     plt.title("Fitness Over Generations")
     plt.xlabel("Generation")
-    plt.ylabel("Fittest Score")
+    plt.ylabel("Distance (log)")
     plt.show()
 
 
@@ -266,9 +282,11 @@ if __name__ == '__main__':
     score_list, path_list = genetic_algorithm(num_generations=1000,
                                    cities_size=50,
                                    population_size=100,
-                                   cross_version=['pmx', 'ox'],
-                                   num_best_lists=2)
-    plot(score_list)
-    print(path_list[0][-1:])
+                                   cross_version=['pmx', 'ox', 'sx'],
+                                   num_best_lists=3)
+
+
+    plot(score_list, ['pmx', 'ox', 'sx'])
+
 
 
